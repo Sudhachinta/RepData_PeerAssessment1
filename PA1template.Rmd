@@ -1,0 +1,149 @@
+---
+title: "Course project"
+author: "Sudha"
+date: "December 19, 2017"
+output: html_document
+---
+
+Right through the assignment, here is the code chunk for downloading the document:
+Loading and preprocessing the data
+
+
+```{r setup, echo = TRUE}
+library(knitr)
+library(dplyr)
+OD <- read.csv("./activity.csv", sep = ",", header = TRUE)
+OD1 <- data.frame(OD)
+```
+
+First, I have set the working directory to downloads after downloading the data. Then created a variable called 'OD' in which the data has been read. After this, have converted the data in the form of a data frame so the changes will be easy to make. 
+
+Up next, the code chunks for the required results.
+1. Calculate the total number of steps taken per day, create a histogram, both in a single step
+```{r, echo = TRUE}
+MODS <- group_by(OD, date)
+Totalsteps <- summarise(MODS, total = sum(steps))
+hist(Totalsteps$total, xlab = "Total Steps taken per day", ylab = "Interval", main = "Total number of steps taken each day")
+```
+
+First, using the dplyr package's group_by function, the data has been grouped by date(day), and the missing values have been ignored, this data has been fed into "MODS" variable.
+To make it easier to plot the histogram, I'm using the summraise function again from dplyr so it would keep the data crisp. This data has been fed into the variable 'Totalsteps'. Another variable 'total' has been created in the  to calculate the sum of steps taken.
+
+A histogram has been created with the 'total' variable in the Totalsteps dataframe.
+
+3.Calculate and report the mean and median of the total number of steps taken per day
+
+```{r, echo = TRUE}
+mean(Totalsteps$total, na.rm = TRUE)
+median(Totalsteps$total, na.rm = TRUE)
+```
+Mean is 10766.19
+Median is 10765
+
+2. What is the average daily activity pattern?
+a. Make a time series plot (i.e. 𝚝𝚢𝚙𝚎 = "𝚕") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r, echo = TRUE}
+MD <- aggregate(steps ~ interval, OD, mean, na.rm = TRUE)
+plot(MD$interval, MD$steps, type = "l", ylab = "Steps", xlab = "Interval")
+```
+
+b. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r, echo = TRUE}
+MAX <- which.max(MD$steps)
+MD[MAX,]
+```
+
+Find out the maximum steps, this data is fed into 'MAX' variable. Then I have subsetted max from the total number of steps data. 
+
+The 5 minute interval was 835 and the maximum average number of steps taken is 206.1698
+
+3. Imputing missing values
+a. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with 𝙽𝙰s)
+
+```{r, echo = TRUE}
+sum(is.na(OD))
+```
+
+The total number of NAs is 2304
+
+b. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+As per the question, we would take the mean for the 5-minute interval, 
+```{r, echo = TRUE}
+for (i in 1:nrow(OD)) {
+if(is.na(OD$steps[i])) {
+sub <- MD$steps[which(MD$interval == OD$interval[i])]
+OD$steps[i] <- sub 
+}}
+```
+
+c. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+The above imputing strategy imputes missing values in the original data frame (OD). [sum(is.na(OD)) gives 0 NA values at this stage. ] However, as the project asks us to create, I'm creating a new data set"OD0" indicating no NA values. 
+```{r, echo = TRUE}
+OD0 <- OD
+```
+
+d. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+Continuing with the same process we have done earlier, 
+```{r, echo = TRUE}
+MODS0 <- group_by(OD0, date)
+Totalsteps0 <- summarise(MODS0, total = sum(steps))
+hist(Totalsteps0$total, xlab = "Total Steps taken per day", ylab = "Interval", main = "Total number of steps taken each day with imputed data")
+mean(Totalsteps0$total)
+median(Totalsteps0$total)
+```
+
+10766.19 is both the mean and median value. Yes they slightly differ, the median value has changed, although the mean value remains the same.
+
+About the impact, right now, there is not much of a serious difference in the data, so the impact is not so clear or substantial. 
+
+4. Are there differences in activity patterns between weekdays and weekends?
+
+For this part the 𝚠𝚎𝚎𝚔𝚍𝚊𝚢𝚜() function may be of some help here. Use the dataset with the filled-in missing values for this part.
+
+a. Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+Hereis the code chunk to create the required the levels required
+```{r, echo = TRUE}
+Day <- function(date_val) {
+wd <- weekdays(as.Date(date_val, '%Y-%m-%d'))
+if  (!(wd == 'Saturday' || wd == 'Sunday')) {
+x <- 'Weekday'
+} else {
+x <- 'Weekend'
+}
+x
+}
+
+OD0$day_type <- as.factor(sapply(OD0$date, Day))
+
+```
+
+b. Make a panel plot containing a time series plot (i.e. 𝚝𝚢𝚙𝚎 = "𝚕") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+```{r, echo = TRUE}
+library(ggplot2)
+
+MD0 <- aggregate(steps ~ interval+day_type, OD0, mean)
+
+Plotl <- ggplot(MD0, aes(interval, steps)) +
+geom_line(stat = "identity")+
+theme_gray() +
+facet_grid(day_type ~ ., scales="fixed", space="fixed") +
+labs(x="Interval", y="No of Steps") +
+ggtitle("No of steps Per Interval by day type")
+print(Plotl)
+```
+
+First I've created a function called day to subset and label the weekdays and weekends, later, converted these into factor variables so plotting can be easier. The plotting method used is ggplot as it is efficient and fuzz free for multiple graphs
+
+About the question "Are there differences in activity patterns between weekdays and weekends?
+
+" yes, in weekends, people tend to walk less than weekdays, lazy weekends! 
+
+
+
+
+
